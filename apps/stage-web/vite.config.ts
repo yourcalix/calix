@@ -1,4 +1,5 @@
-import { join, resolve } from 'node:path'
+import { copyFile, mkdir, stat } from 'node:fs/promises'
+import { dirname, join, resolve } from 'node:path'
 import { cwd, env } from 'node:process'
 
 import VueI18n from '@intlify/unplugin-vue-i18n/vite'
@@ -20,7 +21,18 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const stageUIAssetsRoot = resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-ui', 'src', 'assets'))
-const sharedCacheDir = resolve(join(import.meta.dirname, '..', '..', '.cache'))
+
+async function pathExists(path: string) {
+  try {
+    await stat(path)
+    return true
+  }
+  catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT')
+      return false
+    throw error
+  }
+}
 
 export default defineConfig({
   optimizeDeps: {
@@ -167,11 +179,27 @@ export default defineConfig({
     // https://github.com/webfansplz/vite-plugin-vue-devtools
     VueDevTools(),
 
+    {
+      name: 'proj-airi:seed-live2d-cache',
+      async configResolved(config) {
+        const cacheCore = resolve(join(config.root, '.cache', 'assets', 'js', 'CubismSdkForWeb-5-r.3', 'Core', 'live2dcubismcore.min.js'))
+        if (await pathExists(cacheCore))
+          return
+
+        const publicCore = resolve(join(config.root, 'public', 'assets', 'js', 'CubismSdkForWeb-5-r.3', 'Core', 'live2dcubismcore.min.js'))
+        if (!await pathExists(publicCore))
+          return
+
+        await mkdir(dirname(cacheCore), { recursive: true })
+        await copyFile(publicCore, cacheCore)
+      },
+    },
+
     DownloadLive2DSDK(),
-    Download('https://dist.ayaka.moe/live2d-models/hiyori_free_zh.zip', 'hiyori_free_zh.zip', 'live2d/models', { parentDir: stageUIAssetsRoot, cacheDir: sharedCacheDir }),
-    Download('https://dist.ayaka.moe/live2d-models/hiyori_pro_zh.zip', 'hiyori_pro_zh.zip', 'live2d/models', { parentDir: stageUIAssetsRoot, cacheDir: sharedCacheDir }),
-    Download('https://dist.ayaka.moe/vrm-models/VRoid-Hub/AvatarSample-A/AvatarSample_A.vrm', 'AvatarSample_A.vrm', 'vrm/models/AvatarSample-A', { parentDir: stageUIAssetsRoot, cacheDir: sharedCacheDir }),
-    Download('https://dist.ayaka.moe/vrm-models/VRoid-Hub/AvatarSample-B/AvatarSample_B.vrm', 'AvatarSample_B.vrm', 'vrm/models/AvatarSample-B', { parentDir: stageUIAssetsRoot, cacheDir: sharedCacheDir }),
+    Download('https://dist.ayaka.moe/live2d-models/hiyori_free_zh.zip', 'hiyori_free_zh.zip', 'live2d/models', { parentDir: stageUIAssetsRoot, cacheDir: stageUIAssetsRoot }),
+    Download('https://dist.ayaka.moe/live2d-models/hiyori_pro_zh.zip', 'hiyori_pro_zh.zip', 'live2d/models', { parentDir: stageUIAssetsRoot, cacheDir: stageUIAssetsRoot }),
+    Download('https://dist.ayaka.moe/vrm-models/VRoid-Hub/AvatarSample-A/AvatarSample_A.vrm', 'AvatarSample_A.vrm', 'vrm/models/AvatarSample-A', { parentDir: stageUIAssetsRoot, cacheDir: stageUIAssetsRoot }),
+    Download('https://dist.ayaka.moe/vrm-models/VRoid-Hub/AvatarSample-B/AvatarSample_B.vrm', 'AvatarSample_B.vrm', 'vrm/models/AvatarSample-B', { parentDir: stageUIAssetsRoot, cacheDir: stageUIAssetsRoot }),
 
     // HuggingFace Spaces
     LFS({ root: cwd(), extraGlobs: [
