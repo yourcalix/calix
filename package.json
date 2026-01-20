@@ -12,7 +12,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "postinstall": "npx simple-git-hooks && pnpm run build:packages",
+    "postinstall": "node -e \"if(!process.env.CI){require('child_process').execSync('npx simple-git-hooks',{stdio:'inherit'})}\" && pnpm run build:packages",
     "dev": "pnpm -r -F @proj-airi/stage-web dev",
     "dev:docs": "pnpm -rF @proj-airi/docs run dev",
     "dev:ui": "pnpm -rF @proj-airi/stage-ui run story:dev",
@@ -24,6 +24,7 @@
     "dev:packages": "pnpm -rF=\"./packages/*\" --parallel run dev",
     "build": "turbo run build -F=\"./packages/*\" -F=\"./apps/*\"",
     "build:web": "turbo run build -F @proj-airi/stage-web",
+    "build:site": "pnpm -F @proj-airi/stage-web run build && pnpm -F @proj-airi/docs run build:base && rm -rf ./apps/stage-web/dist/docs && mv ./docs/.vitepress/dist ./apps/stage-web/dist/docs && cp ./apps/stage-web/dist/docs/sitemap.xml ./apps/stage-web/dist/sitemap.xml",
     "build:tamagotchi": "pnpm -rF @proj-airi/stage-tamagotchi run app:build",
     "build:apps": "turbo run build -F=\"./apps/*\"",
     "build:packages": "turbo run build -F=\"./packages/*\"",
